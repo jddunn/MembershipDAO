@@ -9,8 +9,12 @@
 Cross-chain contract meant to support paid membership features. Wraps around OpenZeppelin's Whitelist
 contract. Has basic banking and DAO functionality for members. This is usually meant to be inherited but 
 can be deployed on its own.
+
 Call the contract with constructor(membershipPrice[uint256], membershipWithdrawalFee[uint256]).
-Set membershipWithdrawalFee to 0 if you want no withdrawal fees.
+
+Set membershipWithdrawalFee to 0 if you want no withdrawal fees. Set membershipPrice to 0 if you want no membership
+fee.
+
 Users deposit wETH into the contract to gain membership.
 Any methods with the modifier `onlyWhitelisted` will guard membership access.
  
