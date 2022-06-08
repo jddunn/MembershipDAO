@@ -465,7 +465,6 @@ contract MembershipDAO is Whitelist {
         public onlyOwner
         {
         for (uint256 i = 0; i < addrs.length; i++) {
-             // Return their investment
             payable(addrs[i]).transfer(membershipBalances[addrs[i]] - fee);
             membershipBalances[addrs[i]] = 0;
             emit WithdrawalEvent(addrs[i], membershipBalances[addrs[i]] - fee);
@@ -479,7 +478,6 @@ contract MembershipDAO is Whitelist {
     */
     function returnInvestmentsAllRevokeMemberships(uint256 fee) public onlyOwner {
         for (uint256 i = 0; i < members.length; i++) {
-            // Return their investment
             payable(members[i]).transfer(membershipBalances[members[i]] - fee);
             emit WithdrawalEvent(members[i], membershipBalances[members[i]] - fee);
             membershipBalances[members[i]] = 0;
@@ -499,7 +497,6 @@ contract MembershipDAO is Whitelist {
         public onlyOwner
         {
         for (uint256 i = 0; i < addrs.length; i++) {
-            // Return their investments - initial membership to keep being a member
             payable(addrs[i]).transfer(membershipBalances[addrs[i]] - fee);
             membershipBalances[addrs[i]] = 0;
             emit WithdrawalEvent(addrs[i], membershipBalances[addrs[i]] - fee);
@@ -512,7 +509,6 @@ contract MembershipDAO is Whitelist {
     */
     function returnInvestmentsAllKeepMemberships(uint256 fee) public onlyOwner {
         for (uint256 i = 0; i < members.length; i++) {
-             // Return their investments - initial membership fee to keep being a member
             payable(members[i]).transfer(membershipBalances[members[i]] - fee);
             emit WithdrawalEvent(members[i], membershipBalances[members[i]]);
             membershipBalances[members[i]] = 0;
