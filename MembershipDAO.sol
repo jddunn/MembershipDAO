@@ -592,14 +592,14 @@ contract MembershipDAO is Whitelist {
     }
 
 
-    // ERC20 Deposits and Withdrawals
+    // **** ERC20 Deposits and Withdrawals **** 
 
     /**
     * @dev Allow users to deposit ERC20 funds.
     * @param amount Token address.
     * @param amount Amount to deposit.
     */
-    function deposit(address token, uint256 amount) public payable onlyWhitelisted {
+    function depositToken(address token, uint256 amount) public payable onlyWhitelisted {
         require(msg.value == amount);
         bool found = false;
         for (uint i = 0; i <= depositedTokens.length; i++) {
