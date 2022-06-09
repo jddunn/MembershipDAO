@@ -441,6 +441,14 @@ contract MembershipDAO is Whitelist {
     }
 
     /**
+    * @dev Gets our tokens deposited from members.
+    * @return List of token addresses.
+    */
+    function getDepositedTokens() public view returns (address[] memory) {
+        return depositedTokens;
+    }
+
+    /**
     * @dev Gets total balance in our contract. 
     * @return uint256 in member account balance.
     */
