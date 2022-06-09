@@ -244,7 +244,10 @@ contract Whitelist is Ownable {
 /*
 * @title MembershipDAO contract.
 * @dev Contract that supports paid membership, banking, and DAO features.
-* @dev Inherits from OpenZeppelin's Whitelist contract. 
+* @dev Inherits from OpenZeppelin's Whitelist contract. Their contract only 
+       uses a hashmap to store the whitelist instead of a merkle tree, so
+       it's not optimial for massive whitelists like maybe a presale whitelist.
+       Paid memberships seem like a great use case as the code remains readable. 
 * @dev Wrap methods with modifier `onlyWhitelisted` for membership access.
 */
 contract MembershipDAO is Whitelist {
