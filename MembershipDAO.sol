@@ -6,17 +6,20 @@
 ██║╚██╔╝██║██╔══╝░░██║╚██╔╝██║██╔══██╗██╔══╝░░██╔══██╗░╚═══██╗██╔══██║██║██╔═══╝░  ██║░░██║██╔══██║██║░░██║
 ██║░╚═╝░██║███████╗██║░╚═╝░██║██████╦╝███████╗██║░░██║██████╔╝██║░░██║██║██║░░░░░  ██████╔╝██║░░██║╚█████╔╝
 ╚═╝░░░░░╚═╝╚══════╝╚═╝░░░░░╚═╝╚═════╝░╚══════╝╚═╝░░╚═╝╚═════╝░╚═╝░░╚═╝╚═╝╚═╝░░░░░  ╚═════╝░╚═╝░░╚═╝░╚════╝░
+
 Cross-chain contract meant to support paid membership features. Wraps around OpenZeppelin's Whitelist
-contract. Has basic banking and DAO functionality for members. This is usually meant to be inherited but 
-can be deployed on its own.
+contract. This is usually meant to be inherited but can be deployed on its own. Memberships are paid
+via native token of the contract.
 
 Call the contract with constructor(membershipPrice[uint256], membershipWithdrawalFee[uint256]).
 
-Set membershipWithdrawalFee to 0 if you want no withdrawal fees. Set membershipPrice to 0 if you want no membership
+Set $membershipWithdrawalFee to 0 if you want no withdrawal fees. Set $membershipPrice to 0 if you want no membership
 fee.
 
-Users deposit wETH into the contract to gain membership.
-Any methods with the modifier `onlyWhitelisted` will guard membership access.
+Any methods with the inherited modifier `onlyWhitelisted` will guard membership access.
+
+Also has basic banking and DAO functionality for members. Any ERC20 tokens can be deposited and withdrawn and kept track
+of in $membershipTokensBalances.
  
    ___  .___    __.    ___    __.    ___/ `  |     ___ 
  .'   ` /   \ .'   \ .'   ` .'   \  /   | |  |   .'   `
@@ -27,9 +30,7 @@ Any methods with the modifier `onlyWhitelisted` will guard membership access.
 pragma abicoder v2;
 pragma solidity ^0.8.7;
 
-// Although we only accept wETH in our contract deposit() methods, 
-// we'll include a withdrawal method for any ERC20 tokens in case
-// people send wrong tokens to us.
+
 // **** Token Interfaces / Standards **** 
 interface IERC20 {
 
@@ -238,6 +239,7 @@ contract Whitelist is Ownable {
   }
 }
 
+
 // **** Membership DAO **** 
 /*
 * @title MembershipDAO contract.
@@ -253,21 +255,30 @@ contract MembershipDAO is Whitelist {
     address public _owner;
 
     // Let our users deposit and withdraw and keep track of their balances
-    mapping(address => uint256) public membershipBalances; 
-    
+    mapping(address => uint256) public membershipBalances; // Membership is paid for via this
+
     // If a user deposits enough to reach the $membershipPrice, they will
     // be added onto the whitelist.
-    uint256 membershipPrice;
+    uint256 public membershipPrice;
+
+    // ERC-20 token balances
+    // Has no effect on membership but we keep track of balances to let users deposit and withdraw
+    mapping (address => mapping (address => uint256)) public membershipTokensBalances;
+    address[] public depositedTokens;
 
     // Our contract allows banking (deposit and withdrawal features)
     // Set a member withdrawal fee to subtract form their balance on withdrawal
-    uint256 membershipWithdrawalFee;
+    uint256 public membershipWithdrawalFee;
 
     // Membership subscription events are encompassed in Whitelist contract.
     // Payment / banking events below
     event DepositEvent(address sender, uint amount);
+    event DepositTokenEvent(address sender, uint amount, address tokenAddr);
     event WithdrawalEvent(address receiver, uint amount);
-    event WithdrawalFailEvent(address receiver, string err);
+    event WithdrawalTokenEvent(address receiver, uint amount, address tokenAddr);
+    event WithdrawalFailEvent(address receiver, uint amount, string err);
+    event WithdrawalTokenFailEvent(address receiver, uint amount, address tokenAddr, string err);
+
 
     constructor(uint256 _membershipPrice, uint256 _membershipWithdrawalFee) {
         membershipPrice = _membershipPrice;
@@ -381,11 +392,11 @@ contract MembershipDAO is Whitelist {
         require(msg.value == amount);
         uint256 withdrawBal = membershipBalances[msg.sender];
         if (withdrawBal <= membershipWithdrawalFee) {
-            emit WithdrawalFailEvent(msg.sender, "Not enough eth to withdraw.");
+            emit WithdrawalFailEvent(msg.sender, amount, "Not enough eth to withdraw.");
             return false;
         }
         if (withdrawBal <= amount) {
-            emit WithdrawalFailEvent(msg.sender, "Not enough eth to withdraw.");
+            emit WithdrawalFailEvent(msg.sender, amount,  "Not enough eth to withdraw.");
             return false;
         }
         payable(msg.sender).transfer(amount - membershipWithdrawalFee);
@@ -401,7 +412,7 @@ contract MembershipDAO is Whitelist {
     function withdrawAll() onlyWhitelisted public payable returns (bool) {
         uint256 withdrawAmount = membershipBalances[msg.sender];
         if (withdrawAmount <= membershipWithdrawalFee) {
-            emit WithdrawalFailEvent(msg.sender, "Not enough eth to withdraw.");
+            emit WithdrawalFailEvent(msg.sender, withdrawAmount, "Not enough eth to withdraw.");
             return false;
         }
         payable(msg.sender).transfer(withdrawAmount - membershipWithdrawalFee);
@@ -412,20 +423,6 @@ contract MembershipDAO is Whitelist {
 
     // **** Central Banking functions **** 
 
-    /**
-    * @dev Gets all balances of all members..
-    * @return Two lists, one with member addresses and the other with balances.
-    */
-    function getMembersBalances() public view returns (address[] memory, uint256[] memory) {
-        address[] memory membersArr;
-        uint256[] memory balancesArr;
-        for (uint256 i = 0; i < members.length; i++) {
-             // Return their investment
-             membersArr[i] = members[i];
-             balancesArr[i] = membershipBalances[members[i]];
-        }    
-        return (membersArr, balancesArr);
-    }
 
     /**
     * @dev Gets balances of a specific members.
@@ -450,6 +447,49 @@ contract MembershipDAO is Whitelist {
     function getContractBalance() public view returns (uint256) {
         return address(this).balance;
     }
+
+    /**
+    * @dev Gets all balances of all members..
+    * @return Two lists, one with member addresses and the other with balances.
+    */
+    function getMembersBalances() public view returns (address[] memory, uint256[] memory) {
+        address[] memory membersArr;
+        uint256[] memory balancesArr;
+        for (uint256 i = 0; i < members.length; i++) {
+             // Return their investment
+             membersArr[i] = members[i];
+             balancesArr[i] = membershipBalances[members[i]];
+        }    
+        return (membersArr, balancesArr);
+    }
+
+    /**
+    * @dev Gets ERC20 token balances of a member.
+    * @param addr Wallet address to get balance of.
+    * @return Two lists, one with list of tokens and the other with list of balances.
+    */
+    function getMemberTokensBalances(address addr) public view returns (address[] memory, uint256[] memory) {
+        address[] memory tokensArr;
+        uint256[] memory balancesArr;
+        for (uint256 i = 0; i <= depositedTokens.length; i++) {
+            if (membershipTokensBalances[addr][depositedTokens[i]] > 0) {
+                tokensArr[tokensArr.length+1] = depositedTokens[i];
+                balancesArr[balancesArr.length +1] = membershipTokensBalances[addr][depositedTokens[i]];
+            }
+        }    
+        return (tokensArr, balancesArr);
+    }
+
+    /**
+    * @dev Gets ERC20 token balance of a member.
+    * @param addr Wallet address to get balance of.
+    * @param token Token address to get balance of.
+    * @return uint256 Token balance.
+    */
+    function getMemberTokenBalances(address addr, address token) public view returns (uint256) {
+        return membershipTokensBalances[addr][token];
+    }
+
 
     // **** Owner / Administrative functions **** 
     
@@ -526,7 +566,7 @@ contract MembershipDAO is Whitelist {
     /**
     * @dev Owner can withdraw wETH into contract.
     */
-    function withdrawOwner() onlyOwner public payable {
+    function withdrawInvestmentsOwner() onlyOwner public payable {
         payable(msg.sender).transfer(address(this).balance);
         emit WithdrawalEvent(msg.sender, address(this).balance);
     }
@@ -551,18 +591,70 @@ contract MembershipDAO is Whitelist {
         emit WithdrawalEvent(msg.sender, address(this).balance);
     }
 
+
+    // ERC20 Deposits and Withdrawals
+
     /**
-    * @dev Emergency transfer for tokens from contract to owner.
-           If someone accidentally asends the contract tokens we 
-           can return to them.
+    * @dev Allow users to deposit ERC20 funds.
+    * @param amount Token address.
+    * @param amount Amount to deposit.
+    */
+    function deposit(address token, uint256 amount) public payable onlyWhitelisted {
+        require(msg.value == amount);
+        bool found = false;
+        for (uint i = 0; i <= depositedTokens.length; i++) {
+            if (depositedTokens[i] == token) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            membershipTokensBalances[msg.sender][token] = amount;
+            depositedTokens.push(token);
+        }
+        emit DepositTokenEvent(msg.sender, msg.value, token);
+    }
+
+    /**
+    * @dev Withdraw ERC20 token deposited into contract.
+    * @param token Token address to withdraw.
+    * @param amount Amount to withdraw.
+    * @return Success boolean.
+    */
+    function withdrawToken(address token, uint256 amount) onlyOwner public payable returns (bool) {
+        IERC20 tokenObj = IERC20(token);
+        uint256 balance = membershipTokensBalances[msg.sender][token];
+        if (membershipTokensBalances[msg.sender][token] == 0) {
+            emit WithdrawalTokenFailEvent(msg.sender, amount, token, "No enough balance to withdraw.");
+            return false;
+        }
+        if (amount > membershipTokensBalances[msg.sender][token] + membershipWithdrawalFee) {
+            emit WithdrawalTokenFailEvent(msg.sender, amount, token, "No enough balance to withdraw.");
+            return false;
+        }
+        tokenObj.transfer(msg.sender, amount - membershipWithdrawalFee);
+        membershipTokensBalances[msg.sender][token] -= amount;
+        emit WithdrawalTokenEvent(msg.sender, balance, token);
+    }
+
+    /**
+    * @dev Withdraw full balance of ERC20 token deposited into contract.
+    * @param token Token to withdraw all balance of.
+    */
+    function withdrawTokenAll(address token) onlyOwner public payable {
+        uint256 balance = membershipTokensBalances[msg.sender][token];
+        withdrawToken(token, balance);
+        emit WithdrawalTokenEvent(msg.sender, balance, token);
+    }
+
+    /**
+    * @dev Withdrawl full balances of tokens.
     * @param tokens Tokens to withdraw.
     */
-    function withdrawTokens(address[] memory tokens) onlyOwner public payable {
-        for (uint256 i = 0; i < tokens.length; i++) {
-            IERC20 token = IERC20(tokens[i]);
-            uint256 balance = token.balanceOf(address(this));
-            token.transfer(msg.sender, balance);
-            emit WithdrawalEvent(msg.sender, balance);
+    function withdrawTokensAll(address[] memory tokens) onlyOwner public payable {
+        for (uint i = 0; i <= tokens.length; i++) {
+            uint256 balance = membershipTokensBalances[msg.sender][tokens[i]];
+            withdrawToken(tokens[i], balance);
         }
     }
 
