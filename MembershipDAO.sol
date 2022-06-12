@@ -6,18 +6,13 @@
 ██║╚██╔╝██║██╔══╝░░██║╚██╔╝██║██╔══██╗██╔══╝░░██╔══██╗░╚═══██╗██╔══██║██║██╔═══╝░  ██║░░██║██╔══██║██║░░██║
 ██║░╚═╝░██║███████╗██║░╚═╝░██║██████╦╝███████╗██║░░██║██████╔╝██║░░██║██║██║░░░░░  ██████╔╝██║░░██║╚█████╔╝
 ╚═╝░░░░░╚═╝╚══════╝╚═╝░░░░░╚═╝╚═════╝░╚══════╝╚═╝░░╚═╝╚═════╝░╚═╝░░╚═╝╚═╝╚═╝░░░░░  ╚═════╝░╚═╝░░╚═╝░╚════╝░
-
 Cross-chain contract meant to support paid membership features. Wraps around OpenZeppelin's Whitelist
 contract. This is usually meant to be inherited but can be deployed on its own. Memberships are paid
 via native token of the contract.
-
 Call the contract with constructor(membershipPrice[uint256], membershipWithdrawalFee[uint256]).
-
 Set $membershipWithdrawalFee to 0 if you want no withdrawal fees. Set $membershipPrice to 0 if you want no membership
 fee.
-
 Any methods with the inherited modifier `onlyWhitelisted` will guard membership access.
-
 Also has basic banking and DAO functionality for members. Any ERC20 tokens can be deposited and withdrawn and kept track
 of in $membershipTokensBalances.
  
@@ -291,6 +286,14 @@ contract MembershipDAO is Whitelist {
         membershipBalances[_owner] = 0; // initialize owner balance
     }
 
+    // Owner membership admin
+    function ownerAddMember(address addr) public onlyOwner {
+        _addMember(addr);
+    }
+
+    function removeAddMember(address addr) public onlyOwner {
+        _removeMember(addr);
+    }
 
     // Whitelist wrappers
     /**
