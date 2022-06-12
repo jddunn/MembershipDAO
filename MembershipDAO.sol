@@ -364,10 +364,9 @@ contract MembershipDAO is Whitelist {
     * @dev Allow users to invest into our contract funds.
            If their investment exceeds our $membershipPrice,
            add them to our whitelist.
-    * @param amount Amount of wETH to deposit from wallet.
     */
-    function deposit(uint256 amount) public payable {
-        require(msg.value == amount);
+    function deposit() public payable {
+        uint256 amount = msg.value;
         if (isWhitelisted(msg.sender)) {
             // If they're already whitelisted we'll add more to their balance.
             // We can track of our members' investments in us to give out
@@ -391,11 +390,10 @@ contract MembershipDAO is Whitelist {
     * @dev Allow users to withdraw their funds minus the
            withdrawal fee we have set. Users cannot withdraw
            until they become members (have paid membership fee).
-    * @param amount Amount of wETH to withdraw to wallet.
     * @return true if successful withdrawal
     */
-    function withdraw(uint256 amount) onlyWhitelisted public payable returns (bool) {
-        require(msg.value == amount);
+    function withdraw() onlyWhitelisted public payable returns (bool) {
+        uint256 amount = msg.value;
         uint256 withdrawBal = membershipBalances[msg.sender];
         if (withdrawBal <= membershipWithdrawalFee) {
             emit WithdrawalFailEvent(msg.sender, amount, "Not enough eth to withdraw.");
@@ -415,7 +413,7 @@ contract MembershipDAO is Whitelist {
     * @dev Allow users to withdraw all funds to their wallet.
     * @return true if successful withdrawal
     */
-    function withdrawAll() onlyWhitelisted public payable returns (bool) {
+    function withdrawAll() onlyWhitelisted public returns (bool) {
         uint256 withdrawAmount = membershipBalances[msg.sender];
         if (withdrawAmount <= membershipWithdrawalFee) {
             emit WithdrawalFailEvent(msg.sender, withdrawAmount, "Not enough eth to withdraw.");
@@ -572,8 +570,7 @@ contract MembershipDAO is Whitelist {
     /**
     * @dev Owner can fund wETH into contract.
     */
-    function depositOwner(uint256 amount) public payable onlyOwner {
-        require(msg.value == amount);
+    function depositOwner() public payable onlyOwner {
         emit DepositEvent(msg.sender, msg.value);
     }
 
@@ -610,11 +607,10 @@ contract MembershipDAO is Whitelist {
 
     /**
     * @dev Allow users to deposit ERC20 funds.
-    * @param amount Token address.
-    * @param amount Amount to deposit.
+    * @param token Token address.
     */
-    function depositToken(address token, uint256 amount) public payable onlyWhitelisted {
-        require(msg.value == amount);
+    function depositToken(address token) public payable onlyWhitelisted {
+        uint256 amount = msg.value;
         bool found = false;
         for (uint i = 0; i <= depositedTokens.length; i++) {
             if (depositedTokens[i] == token) {
@@ -632,18 +628,18 @@ contract MembershipDAO is Whitelist {
     /**
     * @dev Withdraw ERC20 token deposited into contract.
     * @param token Token address to withdraw.
-    * @param amount Amount to withdraw.
     * @return Success boolean.
     */
-    function withdrawToken(address token, uint256 amount) onlyOwner public payable returns (bool) {
+    function withdrawToken(address token) onlyOwner public payable returns (bool) {
         IERC20 tokenObj = IERC20(token);
+        uint256 amount = msg.value;
         uint256 balance = membershipTokensBalances[msg.sender][token];
         if (membershipTokensBalances[msg.sender][token] == 0) {
-            emit WithdrawalTokenFailEvent(msg.sender, amount, token, "No enough balance to withdraw.");
+            emit WithdrawalTokenFailEvent(msg.sender, amount, token, "Not enough balance to withdraw.");
             return false;
         }
         if (amount > membershipTokensBalances[msg.sender][token] + membershipWithdrawalFee) {
-            emit WithdrawalTokenFailEvent(msg.sender, amount, token, "No enough balance to withdraw.");
+            emit WithdrawalTokenFailEvent(msg.sender, amount, token, "Not enough balance to withdraw.");
             return false;
         }
         tokenObj.transfer(msg.sender, amount - membershipWithdrawalFee);
@@ -656,21 +652,34 @@ contract MembershipDAO is Whitelist {
     * @dev Withdraw full balance of ERC20 token deposited into contract.
     * @param token Token to withdraw all balance of.
     */
-    function withdrawTokenAll(address token) onlyOwner public payable {
+    function withdrawTokenAll(address token) onlyOwner public returns (bool) {
         uint256 balance = membershipTokensBalances[msg.sender][token];
-        withdrawToken(token, balance);
+        IERC20 tokenObj = IERC20(token);
+        if (membershipWithdrawalFee >= balance) {
+            emit WithdrawalTokenFailEvent(msg.sender, balance, token, "Not enough balance to withdraw.");
+            return false;
+        }
+        tokenObj.transfer(msg.sender, balance - membershipWithdrawalFee);
+        membershipTokensBalances[msg.sender][token] -= balance;
         emit WithdrawalTokenEvent(msg.sender, balance, token);
+        return true;
     }
 
     /**
     * @dev Withdrawl full balances of tokens.
     * @param tokens Tokens to withdraw.
     */
-    function withdrawTokensAll(address[] memory tokens) onlyOwner public payable {
+    function withdrawTokensAll(address[] memory tokens) onlyOwner public {
         for (uint i = 0; i <= tokens.length; i++) {
             uint256 balance = membershipTokensBalances[msg.sender][tokens[i]];
-            withdrawToken(tokens[i], balance);
+            if (membershipWithdrawalFee >= balance) {
+                emit WithdrawalTokenFailEvent(msg.sender, balance, tokens[i], "Not enough balance to withdraw.");
+            } else {
+                membershipTokensBalances[msg.sender][tokens[i]] -= balance;
+                emit WithdrawalTokenEvent(msg.sender, balance, tokens[i]);
+            }
         }
+
     }
 
     // **** Utils **** 
