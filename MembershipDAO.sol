@@ -649,6 +649,7 @@ contract MembershipDAO is Whitelist {
         tokenObj.transfer(msg.sender, amount - membershipWithdrawalFee);
         membershipTokensBalances[msg.sender][token] -= amount;
         emit WithdrawalTokenEvent(msg.sender, balance, token);
+        return true;
     }
 
     /**
