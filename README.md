@@ -33,9 +33,9 @@ There are basic investment DAO features, where members can deposit and withdraw 
 
 `withdrawAndReturnInvestments()`: Withdraw wETH deposited into contract (membership fees) to owner. Returns invested tokens back to members. Only owner can call this.
 
-`withdrawAndReturnInvestmentsAndKeepMemberships()`: Withdraw wETH deposited into contract (membership fees) to owner. Returns all invested / deposited tokens to members. Only owner can call this.
-
 `withdrawAndReturnInvestmentsAndRevokeMemberships()`: Withdraw wETH deposited into contract (membership fees) to owner. Returns all invested / deposited tokens to members, and revokes their memberships. Only owner can call this.
+
+`withdrawAndReturnInvestmentsAndKeepMemberships()`: Withdraw wETH deposited into contract (membership fees) to owner. Returns all invested / deposited tokens to members. Only owner can call this.
 
 `returnInvestmentsAllAndRevokeMemberships()`: Returns all invested / deposited tokens to members, and revokes their memberships. Only owner can call this.
 
