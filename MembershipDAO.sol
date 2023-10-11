@@ -15,6 +15,8 @@ fee.
 Any methods with the inherited modifier `onlyWhitelisted` will guard membership access.
 Also has basic banking and DAO functionality for members. Any ERC20 tokens can be deposited and withdrawn and kept track
 of in $membershipTokensBalances.
+
+Note: This is a basic POC concept and does not guard against reentrancy attacks, so it is not recommended to use for production as-is.
  
    ___  .___    __.    ___    __.    ___/ `  |     ___ 
  .'   ` /   \ .'   \ .'   ` .'   \  /   | |  |   .'   `
