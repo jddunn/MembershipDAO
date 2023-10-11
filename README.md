@@ -1,5 +1,5 @@
 # MembershipDAO
-Smart contract with paid membership access control, basic DAO and banking. Note: This is a basic POC concept and does not guard against reentrancy attacks, so it is not recommended to use for production as-is.
+Smart contract with paid membership access control, basic DAO and banking. Note: This is a POC concept contract / example, for simplicity's sake it does not separate withdrawal requests from actual withdrawal functionality, and so does not guard against reentrancy attacks. It is not recommended to use for production as-is.
 
 ## Intro
 
