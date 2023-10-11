@@ -630,7 +630,7 @@ contract MembershipDAO is Whitelist {
     * @param token Token address to withdraw.
     * @return Success boolean.
     */
-    function withdrawToken(address token) onlyOwner public payable returns (bool) {
+    function withdrawToken(address token) public payable returns (bool) {
         IERC20 tokenObj = IERC20(token);
         uint256 amount = msg.value;
         uint256 balance = membershipTokensBalances[msg.sender][token];
@@ -652,7 +652,7 @@ contract MembershipDAO is Whitelist {
     * @dev Withdraw full balance of ERC20 token deposited into contract.
     * @param token Token to withdraw all balance of.
     */
-    function withdrawTokenAll(address token) onlyOwner public returns (bool) {
+    function withdrawTokenAll(address token) public returns (bool) {
         uint256 balance = membershipTokensBalances[msg.sender][token];
         IERC20 tokenObj = IERC20(token);
         if (membershipWithdrawalFee >= balance) {
@@ -669,7 +669,7 @@ contract MembershipDAO is Whitelist {
     * @dev Withdrawl full balances of tokens.
     * @param tokens Tokens to withdraw.
     */
-    function withdrawTokensAll(address[] memory tokens) onlyOwner public {
+    function withdrawTokensAll(address[] memory tokens) public {
         for (uint i = 0; i <= tokens.length; i++) {
             uint256 balance = membershipTokensBalances[msg.sender][tokens[i]];
             if (membershipWithdrawalFee >= balance) {
